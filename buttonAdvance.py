@@ -67,20 +67,20 @@ def pressNitroButton():
         print(f"An error occurred while trying to locate the nitro bar: {e}")
 
 
-def scrollLeft(times: int = 1):
+def scrollUp(times: int = 1):
     """
-    Scrolls the screen to the left a specified number of times.
+    Scrolls the screen up a specified number of times.
     """
     for i in range(times):
         time.sleep(1)
-        pyautogui.scroll(-1000)  # Negative value scrolls left
-        print(f"Scrolled left {i + 1} times.")
+        pyautogui.scroll(1000)  # Positive value scrolls up
+        print(f"Scrolled up {i + 1} times.")
 
-def scrollRight(times: int = 1):
+def scrollDown(times: int = 1):
     """
-    Scrolls the screen to the right a specified number of times.
+    Scrolls the screen down a specified number of times.
     """
     for i in range(times):
         time.sleep(1)
-        pyautogui.scroll(1000)  # Positive value scrolls right
-        print(f"Scrolled right {i + 1} times.")
+        pyautogui.scroll(-1000)  # Negative value scrolls down
+        print(f"Scrolled down {i + 1} times.")
