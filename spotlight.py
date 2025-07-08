@@ -1,6 +1,6 @@
 import pyautogui
 import time
-from buttonAdvance import pressButtonAdvance, isThereButtonAdvance, pressMiddleScreen, pressNitroButton, scrollLeft
+from buttonAdvance import pressButtonAdvance, isThereButtonAdvance, pressMiddleScreen, pressNitroButton, scrollUp
 
 
 
@@ -12,7 +12,7 @@ def main():
     # pressButtonAdvance(r"Assets\Images\spotlightPlayButton.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
     while True:
         pressButtonAdvance(r"Assets\Images\raceButton.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
-        scrollLeft(5)
+        scrollUp(5)
         pressButtonAdvance(r"Assets\Images\saleenS1.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
         pressButtonAdvance(r"Assets\Images\play1.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
         for i in range(1, 120):
