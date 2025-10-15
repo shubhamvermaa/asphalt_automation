@@ -9,7 +9,7 @@ def pressButtonAdvance(image_path: str, confidence: float = 0.7, retries: int = 
     for attempt in range(1, retries + 1):
         time.sleep(delay)
         try:
-            button_location = pyautogui.locateOnScreen(image_path, confidence=confidence)
+            button_location = pyautogui.locateOnScreen(image_path, confidence=confidence, grayscale=True)
             if button_location:
                 pyautogui.click(pyautogui.center(button_location))
                 print(f"Button found and clicked on attempt {attempt} | {image_path}")
@@ -30,6 +30,7 @@ def isThereButtonAdvance(image_path: str, confidence: float = 0.7) -> bool:
     Checks if a button exists on the screen using the provided image.
     Returns True if found, False otherwise.
     """
+    print(f"Checking for button: {image_path}")
     try:
         button_location = pyautogui.locateOnScreen(image_path, confidence=confidence)
         if button_location:
@@ -53,6 +54,13 @@ def pressMiddleScreen():
     print(f"Clicking at the middle of the screen: ({middle_x}, {middle_y})")
     pyautogui.click(middle_x, middle_y)
 
+def pressLeftButton():
+    time.sleep(1)
+    pyautogui.press('left')
+
+def pressSpaceButton():
+    time.sleep(1)
+    pyautogui.press('space')
 
 def pressNitroButton():
     time.sleep(1)
@@ -75,6 +83,7 @@ def scrollUp(times: int = 1):
         time.sleep(1)
         pyautogui.scroll(1000)  # Positive value scrolls up
         print(f"Scrolled up {i + 1} times.")
+
 
 def scrollDown(times: int = 1):
     """

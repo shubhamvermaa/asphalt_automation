@@ -1,11 +1,7 @@
 import pyautogui
 import time
 from buttonAdvance import pressButtonAdvance, isThereButtonAdvance
-
-
 time.sleep(3)
-print("running refule.py script")
-
 
 def startRefuelAds():
     while True:
@@ -31,7 +27,7 @@ def startAdsForTicketRefill():
     while True:
         time.sleep(1)
         try:
-            watchAdButton = pyautogui.locateOnScreen(r"Assets\Images\refillTicketWatchAdButton.png", confidence=0.9)
+            watchAdButton = pyautogui.locateOnScreen(r"Assets\Images\watchAdButton.png", confidence=0.9)
             if watchAdButton:
                 print("Ads found")
                 pyautogui.click(pyautogui.center(watchAdButton))
@@ -41,8 +37,9 @@ def startAdsForTicketRefill():
                 print("Ticket Refilled")
             if isThereButtonAdvance(r"Assets\Images\noMoreTicketAdsAvailable.png", confidence=0.7):
                 print("Buying ticket")
-                pressButtonAdvance(r"Assets\Images\buyTicketButton.png", confidence=0.9, retries=3, delay=1.0, ignorePanic=True)
-            pressButtonAdvance(r"Assets\Images\backButton.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
+                pressButtonAdvance(r"Assets\Images\buyTicketButton.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
+            # Ticket filled either by ads or by purchase, going back
+            pressButtonAdvance(r"Assets\Images\backButton.png", confidence=0.8, retries=3, delay=1.0, ignorePanic=False)
             break
         print("More Tickets Ads are there")
 
