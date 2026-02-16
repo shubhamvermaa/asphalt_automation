@@ -12,7 +12,7 @@ def startRefuelAds():
         except Exception:
             print("Error finding watchAd button")
             try:
-                if pyautogui.locateOnScreen(r"Assets\Images\playButton.png", confidence=0.7):
+                if pyautogui.locateOnScreen(r"Assets\Images\play2.png", confidence=0.7):
                     print("Car Refuelled")
                     break
             except Exception:

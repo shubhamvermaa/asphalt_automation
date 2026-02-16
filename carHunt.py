@@ -7,19 +7,19 @@ def handleRefill():
     if isThereButtonAdvance(r"Assets\Images\skipButton.png", confidence=0.7):
         startRefuel()
 
-    if isThereButtonAdvance(r"Assets\Images\playButton.png", confidence=0.7):
-        pressButtonAdvance(r"Assets\Images\playButton.png", confidence=0.7, retries=3, delay=1.0)
+    if isThereButtonAdvance(r"Assets\Images\play2.png", confidence=0.7):
+        pressButtonAdvance(r"Assets\Images\play2.png", confidence=0.7, retries=3, delay=1.0)
 
     if isThereButtonAdvance(r"Assets\Images\refillTicketsBanner.png", confidence=0.7):
         startAdsForTicketRefill()
         time.sleep(1)
-        pressButtonAdvance(r"Assets\Images\playButton.png", confidence=0.7, retries=3, delay=1.0)
+        pressButtonAdvance(r"Assets\Images\play2.png", confidence=0.7, retries=3, delay=1.0)
 
 
 def handleRace():
     raceEnded, nitroCounter = False, 0
     while not raceEnded:
-        raceEnded = isThereButtonAdvance(r"Assets\Images\NextButton.png", confidence=0.7)
+        raceEnded = isThereButtonAdvance(r"Assets\Images\nextButton.png", confidence=0.7)
         if nitroCounter % 8 == 0:
             # press space key for nitro
             pressNitroButton()
@@ -47,7 +47,7 @@ def main():
         time.sleep(3)
         pressButtonAdvance(r"Assets\Images\formulaE.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
         handleRefill()
-        pressButtonAdvance(r"Assets\Images\playButton.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
+        pressButtonAdvance(r"Assets\Images\play2.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
         handleRace()
         handlePostRace()
 
