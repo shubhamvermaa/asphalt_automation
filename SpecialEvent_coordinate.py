@@ -22,13 +22,12 @@ logger = TeeLogger(log_path, mode="w")
 sys.stdout = logger
 sys.stderr = logger
 
-from refuel import startRefuelAds, startAdsForTicketRefill, buyTicketDirectly
-from buttonAdvance import isThereButtonAdvance, pressMiddleScreen, pressSpaceButton, pressLeftButton, clickCoordinate
+from refuel import startAdsForTicketRefill, buyTicketDirectly
+from buttonAdvance import isThereButtonAdvance, pressMiddleScreen, pressSpaceButton, clickCoordinate
 from coordinates import COORDINATES
 
 BUY_TICKETS = True  # Set to True to buy tickets with tokens, False to watch ads for refills
 WATCH_CREDITS_ADS = False  # Set to True to watch ads for credits after races
-BUY_CAR_FUEL = True  # Set to True to buy car fuel with tokens, False to watch ads for refills
 
 def waitForButton(image_path: str, confidence: float = 0.8, timeout: float = 120.0) -> bool:
     """
@@ -37,6 +36,8 @@ def waitForButton(image_path: str, confidence: float = 0.8, timeout: float = 120
     Returns True when the button is found.
     """
     start_time = time.time()
+    beep_interval = 1.0
+    last_beep_time = 0
     
     print(f"Waiting for {image_path}...")
     while True:
@@ -55,35 +56,36 @@ def waitForButton(image_path: str, confidence: float = 0.8, timeout: float = 120
                 
         time.sleep(2)
 
-def handleTicketsRefill():
-    print("Handling ticket refills if necessary.")
+def handleRefill():
+    print("Handling refills if necessary.")
     time.sleep(2)
     if isThereButtonAdvance(r"Assets\Images\refillTicketsBanner.png", confidence=0.7):
-        if BUY_TICKETS:
-            buyTicketDirectly()
-            waitForButton(r"Assets\Images\play2.png")
-            clickCoordinate(*COORDINATES["play2_button"], label="play2_button")
-        else:
-            startAdsForTicketRefill()
+        if BUY_TICKETS: buyTicketDirectly()
+        else: startAdsForTicketRefill()
         time.sleep(2)
+        clickCoordinate(*COORDINATES["play1_button"], label="play1_button")
 
 def handleRace():
-    print("Race started. Autopilot active (Nitro every 4s).")
+    print("Race started. Autopilot active (Nitro every 5s).")
     raceEnded = False
     last_nitro_time = 0
     last_check_time = 0
     start_time = time.time()
+    last_beep_time = 0
+
     while not raceEnded:
         current_time = time.time()
-        # Press nitro every 4 seconds
-        if current_time - last_nitro_time >= 4.0:
+
+        # Press nitro every 5 seconds
+        if current_time - last_nitro_time >= 5.0:
             pressSpaceButton()
             last_nitro_time = time.time()
-        # Check if race ended every 3 seconds, but only after 37 seconds of race time have elapsed
+
+        # Check if race ended every 3 seconds, but only after 30 seconds of race time have elapsed
         if (current_time - start_time >= 37.0) and (current_time - last_check_time >= 3.0):
-            pressLeftButton()
             raceEnded = isThereButtonAdvance(r"Assets\Images\nextButton.png", confidence=0.7, retries=1, delay=0.1)
             last_check_time = time.time()
+
         # Stuck check if race is running for > 2 minutes
         elapsed = current_time - start_time
         if elapsed > 120.0:
@@ -93,10 +95,14 @@ def handleRace():
             except Exception:
                 print("\a", end="", flush=True)
             raise TimeoutError("Race autopilot running for more than 120s.")
+
         time.sleep(0.2)
 
 def handlePostRace():
     # Search for first next button, click as soon as found
+    # handle race confirmed this nextButton
+    # print("Searching for first nextButton...")
+    # waitForButton(r"Assets\Images\nextButton.png")
     clickCoordinate(*COORDINATES["next_button"], label="first_next_button")
     
     # Search for second next button, click as soon as found
@@ -121,38 +127,27 @@ def handlePostRace():
         print("Searching for miss out button...")
         waitForButton(r"Assets\Images\missoutButton.png")
         clickCoordinate(*COORDINATES["missoutButton"], label="missoutButton")
-        while not isThereButtonAdvance(r"Assets\Images\whiteNextButton.png", confidence=0.7, retries=1, delay=0.1):
-            time.sleep(0.5)
-            pressMiddleScreen()
-            time.sleep(0.5)
-        # waitForButton(r"Assets\Images\whiteNextButton.png")
+        time.sleep(2)
+        pressMiddleScreen()
+        time.sleep(2)
+        waitForButton(r"Assets\Images\whiteNextButton.png")
         clickCoordinate(*COORDINATES["white_next_button"], label="post_missout_white_next_button")
+         
+
 
 def main():
-    print("Starting Car Hunt automation script with coordinate-based clicks...")
-    for count in range(3, 0, -1):
+    print("Starting SE Hunt automation script with coordinate-based clicks...")
+    for count in range(4, 0, -1):
         print(f"Starting in {count} seconds...", end="\r", flush=True)
         time.sleep(1)
-    print("Starting now!")
-    for i in range(1, 101):
+    print("Starting now!                                                 ")
+    for i in range(1, 201):
         print(f"\n--- Race number: {i} ---")
-        waitForButton(r"Assets\Images\raceButton.png")
-        clickCoordinate(*COORDINATES["race_button"], label="race_button")
-        waitForButton(r"Assets\Images\Cars\pragaR1.png")
-        clickCoordinate(*COORDINATES["pragaR1CarButton"], label="pragaR1CarButton")
-        time.sleep(1)
-        if isThereButtonAdvance(r"Assets\Images\skipButton.png", confidence=0.7):
-            # here play2 is effectively the skip button
-            clickCoordinate(*COORDINATES["carRefuelSkipButton"], label="carRefuelSkipButton")
-            if BUY_CAR_FUEL:
-                time.sleep(1)
-                clickCoordinate(*COORDINATES["buyCarFuelButton"], label="buyCarFuelButton")
-            else:
-                startRefuelAds()
-                time.sleep(2)
-            waitForButton(r"Assets\Images\play2.png")
-        clickCoordinate(*COORDINATES["play2_button"], label="play2_button")
-        handleTicketsRefill()
+        waitForButton(r"Assets\Images\nextButton.png")
+        clickCoordinate(*COORDINATES["next_button"], label="pre_race_next_button")
+        waitForButton(r"Assets\Images\play1.png")
+        clickCoordinate(*COORDINATES["play1_button"], label="pre_race_play1_button")
+        handleRefill()
         handleRace()
         handlePostRace()
         time.sleep(2)

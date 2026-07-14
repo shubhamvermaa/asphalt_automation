@@ -1,26 +1,55 @@
 import pyautogui
 import time
 
+def clickCoordinate(x: int, y: int, click_delay: float = 2.0, label: str = None):
+    """Clicks the specified screen coordinates and sleeps for `click_delay` seconds."""
+    if label:
+        print(f"Clicking {label} at ({x}, {y})")
+    else:
+        print(f"Clicking coordinate ({x}, {y})")
+    pyautogui.click(x, y)
+    try:
+        screen_w, screen_h = pyautogui.size()
+        pyautogui.moveTo(screen_w - 5, screen_h // 2, duration=0.1)
+    except Exception as e:
+        print(f"Error moving mouse to right edge: {e}")
+    time.sleep(click_delay)
+
 def pressButtonAdvance(image_path: str, confidence: float = 0.7, retries: int = 3, delay: float = 1.0, ignorePanic: bool = True):
     """
     Tries to locate and click a button on the screen using the provided image.
     Retries up to `retries` times before raising an exception or continuing based on ignorePanic.
     """
-    moveMouseToLeftEdge(delay=0.5)  # Move mouse to left edge before searching for the button
+    # Detect if we should search the bottom-right region
+    lower_path = image_path.lower()
+    is_bottom_right = any(name in lower_path for name in ["race", "skipButton", "nextbutton", "play1", "play2", "missoutbutton", "watchadpostracebutton", "backbutton"])
+    
+    if is_bottom_right:
+        screen_w, screen_h = pyautogui.size()
+        region = (1215, 715, screen_w - 1215, screen_h - 715)
+    else:
+        region = None
+
     for attempt in range(1, retries + 1):
         time.sleep(delay)
         try:
-            button_location = pyautogui.locateOnScreen(image_path, confidence=confidence, grayscale=True)
+            button_location = pyautogui.locateOnScreen(image_path, confidence=confidence, region=region, grayscale=True)
             if button_location:
                 pyautogui.click(pyautogui.center(button_location))
                 print(f"Button found and clicked on attempt {attempt} | {image_path}")
+                
+                # Move mouse to right edge after click to prevent hover highlights
+                try:
+                    screen_w, screen_h = pyautogui.size()
+                    pyautogui.moveTo(screen_w - 5, screen_h // 2, duration=0.1)
+                except Exception as e:
+                    print(f"Error moving mouse to right edge: {e}")
                 return True
-            else:
-                print(f"Attempt {attempt}: Button not found.")
         except Exception as e:
-            print(f"Attempt {attempt}: Error occurred - {e}")
+            if "ImageNotFoundException" not in type(e).__name__:
+                print(f"Attempt {attempt}: Error occurred - {repr(e)}")
+            
     if ignorePanic:
-        print(f"Button not found after {retries} attempts | {image_path} | Continuing without panicking.")
         return False
     else:
         raise RuntimeError(f"Button not found after {retries} attempts | {image_path} | Panicking!")
@@ -31,20 +60,27 @@ def isThereButtonAdvance(image_path: str, confidence: float = 0.7, retries: int 
     Checks if a button exists on the screen using the provided image.
     Returns True if found, False otherwise.
     """
-    moveMouseToLeftEdge(delay=0.5)
+    # Detect if we should search the bottom-right region
+    lower_path = image_path.lower()
+    is_bottom_right = any(name in lower_path for name in ["race", "skipButton", "nextbutton", "play1", "play2", "missoutbutton", "watchadpostracebutton", "backbutton"])
+    if is_bottom_right:
+        screen_w, screen_h = pyautogui.size()
+        region = (1215, 715, screen_w - 1215, screen_h - 715)
+    else:
+        region = None
+
     for attempt in range(1, retries + 1):
         time.sleep(delay)
         try:
-            button_location = pyautogui.locateOnScreen(image_path, confidence=confidence)
+            button_location = pyautogui.locateOnScreen(image_path, confidence=confidence, region=region, grayscale=True)
             if button_location:
                 print(f"Attempt {attempt}: Button found: {image_path}")
                 return True
-            else:
-                print(f"Attempt {attempt}: Button not found: {image_path}")
         except Exception as e:
-            print(f"Error checking for button: {e}")
+            if "ImageNotFoundException" not in type(e).__name__:
+                print(f"Error checking for button: {repr(e)}")
+            
     if ignorePanic:
-        print(f"Button not found after {retries} attempts | {image_path} | Continuing without panicking.")
         return False
     else:
         raise RuntimeError(f"Button not found after {retries} attempts | {image_path} | Panicking!")
@@ -53,10 +89,8 @@ def isThereButtonAdvance(image_path: str, confidence: float = 0.7, retries: int 
 def pressMiddleScreen():
     time.sleep(1)
     screen_width, screen_height = pyautogui.size()
-
     middle_x = screen_width // 2
     middle_y = screen_height // 2
-
     print(f"Clicking at the middle of the screen: ({middle_x}, {middle_y})")
     pyautogui.click(middle_x, middle_y)
 
