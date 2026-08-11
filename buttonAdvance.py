@@ -15,20 +15,23 @@ def clickCoordinate(x: int, y: int, click_delay: float = 2.0, label: str = None)
         print(f"Error moving mouse to right edge: {e}")
     time.sleep(click_delay)
 
+def _get_search_region(image_path: str):
+    """Returns the search region (left, top, width, height) for locateOnScreen based on button type."""
+    lower_path = image_path.lower()
+    if "refuelwatchadbutton" in lower_path:
+        return (970, 560, 1461 - 970, 687 - 560)
+    elif any(name in lower_path for name in ["race", "skipbutton", "nextbutton", "play1", "play2", "missoutbutton", "watchadpostracebutton", "backbutton"]):
+        screen_w, screen_h = pyautogui.size()
+        return (1215, 715, screen_w - 1215, screen_h - 715)
+    return None
+
+
 def pressButtonAdvance(image_path: str, confidence: float = 0.7, retries: int = 3, delay: float = 1.0, ignorePanic: bool = True):
     """
     Tries to locate and click a button on the screen using the provided image.
     Retries up to `retries` times before raising an exception or continuing based on ignorePanic.
     """
-    # Detect if we should search the bottom-right region
-    lower_path = image_path.lower()
-    is_bottom_right = any(name in lower_path for name in ["race", "skipButton", "nextbutton", "play1", "play2", "missoutbutton", "watchadpostracebutton", "backbutton"])
-    
-    if is_bottom_right:
-        screen_w, screen_h = pyautogui.size()
-        region = (1215, 715, screen_w - 1215, screen_h - 715)
-    else:
-        region = None
+    region = _get_search_region(image_path)
 
     for attempt in range(1, retries + 1):
         time.sleep(delay)
@@ -60,14 +63,7 @@ def isThereButtonAdvance(image_path: str, confidence: float = 0.7, retries: int 
     Checks if a button exists on the screen using the provided image.
     Returns True if found, False otherwise.
     """
-    # Detect if we should search the bottom-right region
-    lower_path = image_path.lower()
-    is_bottom_right = any(name in lower_path for name in ["race", "skipButton", "nextbutton", "play1", "play2", "missoutbutton", "watchadpostracebutton", "backbutton"])
-    if is_bottom_right:
-        screen_w, screen_h = pyautogui.size()
-        region = (1215, 715, screen_w - 1215, screen_h - 715)
-    else:
-        region = None
+    region = _get_search_region(image_path)
 
     for attempt in range(1, retries + 1):
         time.sleep(delay)
@@ -97,6 +93,32 @@ def pressMiddleScreen():
 def pressLeftButton():
     time.sleep(1)
     pyautogui.press('left')
+
+def pressAButton(delay: float = 0.5):
+    """Presses the 'a' key to move to the left car."""
+    time.sleep(delay)
+    print("Pressing 'a' key (move left car)")
+    pyautogui.press('a')
+
+def pressDButton(delay: float = 0.5):
+    """Presses the 'd' key to move to the right car."""
+    time.sleep(delay)
+    print("Pressing 'd' key (move right car)")
+    pyautogui.press('d')
+
+def moveLeftCar(steps: int = 1, delay: float = 0.5):
+    """Sends 'a' key strokes `steps` times to move to the left car."""
+    for i in range(steps):
+        print(f"Moving left car ({i+1}/{steps}) by pressing 'a'")
+        pyautogui.press('a')
+        time.sleep(delay)
+
+def moveRightCar(steps: int = 1, delay: float = 0.5):
+    """Sends 'd' key strokes `steps` times to move to the right car."""
+    for i in range(steps):
+        print(f"Moving right car ({i+1}/{steps}) by pressing 'd'")
+        pyautogui.press('d')
+        time.sleep(delay)
 
 def pressSpaceButton():
     time.sleep(1)

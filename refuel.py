@@ -5,52 +5,68 @@ from buttonAdvance import pressButtonAdvance, isThereButtonAdvance, clickCoordin
 from coordinates import COORDINATES
 time.sleep(3)
 
+def _play_alarm():
+    """Plays an auditory alert using winsound or console bell fallback."""
+    try:
+        winsound.Beep(1000, 1000)
+    except Exception:
+        print("\a", end="", flush=True)
+
+
+def _wait_for_refuel_ad_to_finish(timeout=120):
+    """Waits for the refuel ad to complete by scanning screen indicators or timing out."""
+    print("Waiting for refuel ad to finish...")
+    time.sleep(20)
+    ad_start = time.time()
+
+    while True:
+        # When ad finishes, we should see watchAdButton, play2, or refuelFastForwardBanner
+        if (isThereButtonAdvance(r"Assets\Images\refuelWatchAdButton.png", confidence=0.6, retries=1, delay=0.0) or 
+            isThereButtonAdvance(r"Assets\Images\play2.png", confidence=0.7, retries=1, delay=0.0) or 
+            isThereButtonAdvance(r"Assets\Images\refuelFastForwardBanner.png", confidence=0.7, retries=1, delay=0.0)):
+            print("Ad finished. Returned to refuel screen.")
+            break
+
+        elapsed = time.time() - ad_start
+        if elapsed > timeout:
+            print(f"❌ FATAL ERROR: Refuel ad stuck for more than {timeout}s. Terminating script.")
+            _play_alarm()
+            raise TimeoutError(f"Refuel ad stuck for more than {timeout}s.")
+
+        time.sleep(2)
+
+
+def _handle_post_refuel_status(is_buying_allowed=False):
+    """Checks car refuel status and handles fast-forward buying if allowed."""
+    if isThereButtonAdvance(r"Assets\Images\play2.png", confidence=0.7):
+        print("Car Refuelled")
+    if is_buying_allowed and isThereButtonAdvance(r"Assets\Images\refuelFastForwardBanner.png", confidence=0.7):
+        print("Buying Car fuel (Fast Forward)...")
+        pressButtonAdvance(r"Assets\Images\skipCarRefuelButton.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
+    print("No more fuel options, exiting refuel loop.")
+
+
 def startRefuelAds():
+    """Scans and watches refuel ads in a loop until finished or no more ads are available."""
     # When car refuel happens, we automatically go back to lobby
+    isBuyingAllowed = False
+
     while True:
         try:
             time.sleep(2)
-            # Find the watch ad button
-            watch_ad = pyautogui.locateOnScreen(r"Assets\Images\watchAdPostRaceButton.png", confidence=0.6)
-            if watch_ad:
+            if isThereButtonAdvance(r"Assets\Images\refuelWatchAdButton.png", confidence=0.6):
                 print("Refuel Ad found.")
                 clickCoordinate(*COORDINATES["carRefuelWatchAdButton"], label="carRefuelWatchAdButton")
-                
-                # Wait for refuel ad to finish
-                time.sleep(10)
-                print("Waiting for refuel ad to finish...")
-                ad_start = time.time()
-                last_beep = 0
-                while True:
-                    # When ad finishes, we should see watchAdButton, play2, or refuelFastForwardBanner
-                    if (pyautogui.locateOnScreen(r"Assets\Images\watchAdPostRaceButton.png", confidence=0.6) or 
-                        pyautogui.locateOnScreen(r"Assets\Images\play2.png", confidence=0.7) or 
-                        pyautogui.locateOnScreen(r"Assets\Images\refuelFastForwardBanner.png", confidence=0.7)):
-                        print("Ad finished. Returned to refuel screen.")
-                        break
-                    
-                    elapsed = time.time() - ad_start
-                    if elapsed > 120:
-                        print(f"❌ FATAL ERROR: Refuel ad stuck for more than 120s. Terminating script.")
-                        try:
-                            winsound.Beep(1000, 1000) # Beep at 1000Hz for 1 second
-                        except Exception:
-                            print("\a", end="", flush=True)
-                        raise TimeoutError("Refuel ad stuck for more than 120s.")
-                    time.sleep(2)
-                continue
+                _wait_for_refuel_ad_to_finish()
             else:
                 print("No refuel ad found. Exiting refuel loop.")
-                raise pyautogui.ImageNotFoundException("watchAdButton not found")
-        except (pyautogui.ImageNotFoundException, Exception) as e:
-            print(f"Refuel watchAd button not found/available: {e}")
-            # Check if car is refuelled
-            if isThereButtonAdvance(r"Assets\Images\play2.png", confidence=0.7):
-                print("Car Refuelled")
-            if isThereButtonAdvance(r"Assets\Images\refuelFastForwardBanner.png", confidence=0.7):
-                print("Buying Car fuel (Fast Forward)...")
-                pressButtonAdvance(r"Assets\Images\skipCarRefuelButton.png", confidence=0.7, retries=3, delay=1.0, ignorePanic=True)
-            print("No more fuel options, exiting refuel loop.")
+                _handle_post_refuel_status(isBuyingAllowed)
+                break
+        except Exception as e:
+            if isinstance(e, TimeoutError):
+                raise
+            print(f"Refuel watchAd button error: {e}")
+            _handle_post_refuel_status(isBuyingAllowed)
             break
 
 
@@ -64,12 +80,11 @@ def startAdsForTicketRefill():
                 time.sleep(10) # Initial sleep for ad load
                 print("Waiting for ad to finish...")
                 ad_start_time = time.time()
-                last_beep = 0
                 while True:
-                    if (pyautogui.locateOnScreen(r"Assets\Images\watchAdButton.png", confidence=0.8) or 
-                        pyautogui.locateOnScreen(r"Assets\Images\ticketFilledNotice.png", confidence=0.8) or
-                        pyautogui.locateOnScreen(r"Assets\Images\noMoreTicketAdsAvailable.png", confidence=0.8) or
-                        pyautogui.locateOnScreen(r"Assets\Images\backButton.png", confidence=0.8)):
+                    if (isThereButtonAdvance(r"Assets\Images\watchAdButton.png", confidence=0.8, retries=1, delay=0.0) or 
+                        isThereButtonAdvance(r"Assets\Images\ticketFilledNotice.png", confidence=0.8, retries=1, delay=0.0) or
+                        isThereButtonAdvance(r"Assets\Images\noMoreTicketAdsAvailable.png", confidence=0.8, retries=1, delay=0.0) or
+                        isThereButtonAdvance(r"Assets\Images\backButton.png", confidence=0.8, retries=1, delay=0.0)):
                         print("Ad finished. Returned to ticket refill screen.")
                         break
                     # Stuck check

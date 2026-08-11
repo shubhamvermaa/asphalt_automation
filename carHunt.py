@@ -1,161 +1,108 @@
-import sys
-import os
-import time
-import winsound
+"""Car Hunt Main Automation Controller"""
+import argparse, os, sys, time, winsound
+from buttonAdvance import clickCoordinate, isThereButtonAdvance, pressLeftButton, pressMiddleScreen, pressSpaceButton
+from coordinates import COORDINATES
+from refuel import buyTicketDirectly, startAdsForTicketRefill, startRefuelAds
+from selectCar import select_valid_car
 
 class TeeLogger:
-    def __init__(self, filename, mode="a"):
-        self.terminal = sys.stdout
-        self.log = open(filename, mode, encoding="utf-8", buffering=1)
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-        self.log.flush()
+    def __init__(self, filename: str, mode: str = "a"):
+        self.terminal, self.log = sys.stdout, open(filename, mode, encoding="utf-8", buffering=1)
+    def write(self, message: str):
+        self.terminal.write(message); self.log.write(message); self.log.flush()
     def flush(self):
-        self.terminal.flush()
-        self.log.flush()
+        self.terminal.flush(); self.log.flush()
 
-# Set up logging to both stdout and asphalt_automation.log
 script_dir = os.path.dirname(os.path.abspath(__file__))
-log_path = os.path.join(script_dir, "asphalt_automation.log")
-logger = TeeLogger(log_path, mode="w")
-sys.stdout = logger
-sys.stderr = logger
+logger = TeeLogger(os.path.join(script_dir, "asphalt_automation.log"), mode="w")
+sys.stdout = sys.stderr = logger
 
-from refuel import startRefuelAds, startAdsForTicketRefill, buyTicketDirectly
-from buttonAdvance import isThereButtonAdvance, pressMiddleScreen, pressSpaceButton, pressLeftButton, clickCoordinate
-from coordinates import COORDINATES
+parser = argparse.ArgumentParser(description="Asphalt Car Hunt Automation Script")
+parser.add_argument("--manage-missout", action="store_true")
+parser.add_argument("--continue-from-play2", action="store_true")
+args, _ = parser.parse_known_args()
 
-BUY_TICKETS = True  # Set to True to buy tickets with tokens, False to watch ads for refills
-WATCH_CREDITS_ADS = False  # Set to True to watch ads for credits after races
-BUY_CAR_FUEL = True  # Set to True to buy car fuel with tokens, False to watch ads for refills
+BUY_TICKETS, WATCH_CREDITS_ADS, BUY_CAR_FUEL = True, False, False
+MANAGE_MISSOUT_BUTTON, CONTINUE_FROM_PLAY2 = args.manage_missout, args.continue_from_play2
 
 def waitForButton(image_path: str, confidence: float = 0.8, timeout: float = 120.0) -> bool:
-    """
-    Waits for a button to appear on the screen (checks every 2 seconds).
-    If it takes longer than `timeout` seconds, it triggers a warning beep every second.
-    Returns True when the button is found.
-    """
     start_time = time.time()
-    
     print(f"Waiting for {image_path}...")
     while True:
-        # Check if button exists on screen (fast check: retries=1, delay=0.1)
-        if isThereButtonAdvance(image_path, confidence=confidence, retries=1, delay=0.1):
-            return True
-            
-        elapsed = time.time() - start_time
-        if elapsed > timeout:
-            print(f"❌ FATAL ERROR: Stuck waiting for {image_path} for more than {int(timeout)}s. Terminating script.")
-            try:
-                winsound.Beep(1000, 1000) # Beep at 1000Hz for 1 second
-            except Exception:
-                print("\a", end="", flush=True) # Fallback bell
-            raise TimeoutError(f"Stuck waiting for {image_path} for more than {int(timeout)}s.")
-                
+        if isThereButtonAdvance(image_path, confidence=confidence, retries=1, delay=0.1): return True
+        if time.time() - start_time > timeout:
+            print(f"❌ FATAL ERROR: Stuck waiting for {image_path} for > {int(timeout)}s.")
+            try: winsound.Beep(1000, 1000)
+            except Exception: print("\a", end="", flush=True)
+            raise TimeoutError(f"Stuck waiting for {image_path} > {int(timeout)}s.")
         time.sleep(2)
 
 def handleTicketsRefill():
-    print("Handling ticket refills if necessary.")
-    time.sleep(2)
+    print("Handling ticket refills if necessary."); time.sleep(2)
     if isThereButtonAdvance(r"Assets\Images\refillTicketsBanner.png", confidence=0.7):
         if BUY_TICKETS:
-            buyTicketDirectly()
-            waitForButton(r"Assets\Images\play2.png")
+            buyTicketDirectly(); waitForButton(r"Assets\Images\play2.png")
             clickCoordinate(*COORDINATES["play2_button"], label="play2_button")
-        else:
-            startAdsForTicketRefill()
+        else: startAdsForTicketRefill()
         time.sleep(2)
 
 def handleRace():
     print("Race started. Autopilot active (Nitro every 4s).")
-    raceEnded = False
-    last_nitro_time = 0
-    last_check_time = 0
-    start_time = time.time()
+    raceEnded, last_n, last_c, start_t = False, 0.0, 0.0, time.time()
     while not raceEnded:
-        current_time = time.time()
-        # Press nitro every 4 seconds
-        if current_time - last_nitro_time >= 4.0:
-            pressSpaceButton()
-            last_nitro_time = time.time()
-        # Check if race ended every 3 seconds, but only after 37 seconds of race time have elapsed
-        if (current_time - start_time >= 37.0) and (current_time - last_check_time >= 3.0):
+        cur_t = time.time()
+        if cur_t - last_n >= 4.0: pressSpaceButton(); last_n = time.time()
+        if (cur_t - start_t >= 34.0) and (cur_t - last_c >= 3.0):
             pressLeftButton()
             raceEnded = isThereButtonAdvance(r"Assets\Images\nextButton.png", confidence=0.7, retries=1, delay=0.1)
-            last_check_time = time.time()
-        # Stuck check if race is running for > 2 minutes
-        elapsed = current_time - start_time
-        if elapsed > 120.0:
-            print(f"❌ FATAL ERROR: Race autopilot running for more than 120s. Terminating script.")
-            try:
-                winsound.Beep(1000, 1000)
-            except Exception:
-                print("\a", end="", flush=True)
-            raise TimeoutError("Race autopilot running for more than 120s.")
+            last_c = time.time()
+        if cur_t - start_t > 120.0:
+            print("❌ FATAL ERROR: Race autopilot running > 120s.")
+            try: winsound.Beep(1000, 1000)
+            except Exception: print("\a", end="", flush=True)
+            raise TimeoutError("Race autopilot running > 120s.")
         time.sleep(0.2)
 
 def handlePostRace():
-    # Search for first next button, click as soon as found
     clickCoordinate(*COORDINATES["next_button"], label="first_next_button")
-    
-    # Search for second next button, click as soon as found
-    print("Searching for second nextButton...")
-    waitForButton(r"Assets\Images\nextButton.png")
+    print("Searching for second nextButton..."); waitForButton(r"Assets\Images\nextButton.png")
     clickCoordinate(*COORDINATES["next_button"], label="second_next_button")
-    
     if WATCH_CREDITS_ADS:
-        # Search for watch ad button, click as soon as found
         waitForButton(r"Assets\Images\watchAdPostRaceButton.png")
-        clickCoordinate(*COORDINATES["watchAdPostRaceButton"], label="watchAdPostRaceButton")
-        time.sleep(2)
+        clickCoordinate(*COORDINATES["watchAdPostRaceButton"], label="watchAdPostRaceButton"); time.sleep(2)
         waitForButton(r"Assets\Images\nextButton.png")
-        clickCoordinate(*COORDINATES["next_button"], label="post_ad_first_next_button")
-        time.sleep(2)
-        pressMiddleScreen()
-        time.sleep(2)
+        clickCoordinate(*COORDINATES["next_button"], label="post_ad_first_next_button"); time.sleep(2)
+        pressMiddleScreen(); time.sleep(2)
         waitForButton(r"Assets\Images\nextButton.png")
         clickCoordinate(*COORDINATES["next_button"], label="post_ad_second_next_button")
     else:
-        # Search for miss out button, click as soon as found
-        print("Searching for miss out button...")
-        waitForButton(r"Assets\Images\missoutButton.png")
-        clickCoordinate(*COORDINATES["missoutButton"], label="missoutButton")
+        if MANAGE_MISSOUT_BUTTON:
+            print("Searching for miss out button..."); waitForButton(r"Assets\Images\missoutButton.png")
+            clickCoordinate(*COORDINATES["missoutButton"], label="missoutButton")
         while not isThereButtonAdvance(r"Assets\Images\whiteNextButton.png", confidence=0.7, retries=1, delay=0.1):
-            time.sleep(0.5)
-            pressMiddleScreen()
-            time.sleep(0.5)
-        # waitForButton(r"Assets\Images\whiteNextButton.png")
-        clickCoordinate(*COORDINATES["white_next_button"], label="post_missout_white_next_button")
+            time.sleep(0.5); pressMiddleScreen(); time.sleep(0.5)
+        time.sleep(1); clickCoordinate(*COORDINATES["white_next_button"], label="post_missout_white_next_button")
 
 def main():
-    print("Starting Car Hunt automation script with coordinate-based clicks...")
-    for count in range(3, 0, -1):
-        print(f"Starting in {count} seconds...", end="\r", flush=True)
-        time.sleep(1)
-    print("Starting now!")
+    print("Starting Car Hunt automation script...")
+    if CONTINUE_FROM_PLAY2: print("Continuing execution directly from play2_button click...")
+    for c in range(3, 0, -1): print(f"Starting in {c} seconds...", end="\r", flush=True); time.sleep(1)
+    print("Starting now!     ")
     for i in range(1, 101):
         print(f"\n--- Race number: {i} ---")
-        waitForButton(r"Assets\Images\raceButton.png")
-        clickCoordinate(*COORDINATES["race_button"], label="race_button")
-        waitForButton(r"Assets\Images\Cars\pragaR1.png")
-        clickCoordinate(*COORDINATES["pragaR1CarButton"], label="pragaR1CarButton")
-        time.sleep(1)
-        if isThereButtonAdvance(r"Assets\Images\skipButton.png", confidence=0.7):
-            # here play2 is effectively the skip button
-            clickCoordinate(*COORDINATES["carRefuelSkipButton"], label="carRefuelSkipButton")
-            if BUY_CAR_FUEL:
-                time.sleep(1)
-                clickCoordinate(*COORDINATES["buyCarFuelButton"], label="buyCarFuelButton")
-            else:
-                startRefuelAds()
-                time.sleep(2)
-            waitForButton(r"Assets\Images\play2.png")
+        if not (i == 1 and CONTINUE_FROM_PLAY2):
+            waitForButton(r"Assets\Images\raceButton.png")
+            clickCoordinate(*COORDINATES["race_button"], label="race_button"); time.sleep(3)
+            clickCoordinate(*COORDINATES["topCar"], label="topCar"); time.sleep(1)
+            if not select_valid_car(target_class="B", minRank=3300, max_attempts=100):
+                print("Warning: Could not find a valid car after 100 attempts!"); break
+            time.sleep(1)
+            if isThereButtonAdvance(r"Assets\Images\skipButton.png", confidence=0.7):
+                clickCoordinate(*COORDINATES["carRefuelSkipButton"], label="carRefuelSkipButton")
+                if BUY_CAR_FUEL: time.sleep(1); clickCoordinate(*COORDINATES["buyCarFuelButton"], label="buyCarFuelButton")
+                else: startRefuelAds(); time.sleep(2)
+                waitForButton(r"Assets\Images\play2.png")
         clickCoordinate(*COORDINATES["play2_button"], label="play2_button")
-        handleTicketsRefill()
-        handleRace()
-        handlePostRace()
-        time.sleep(2)
+        handleTicketsRefill(); handleRace(); handlePostRace(); time.sleep(2)
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
